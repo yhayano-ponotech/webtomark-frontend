@@ -1,0 +1,74 @@
+name: Deploy to Vercel
+
+# 実行タイミングの設定: mainブランチへのプッシュまたはプルリクエストがマージされたとき
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+# ジョブの定義
+jobs:
+  deploy:
+    # プルリクエストがマージされた場合のみ実行
+    if: github.event.pull_request.merged == true || github.event_name == 'push'
+
+    # 実行環境の指定
+    runs-on: ubuntu-latest
+
+    # 実行ステップ
+    steps:
+      # リポジトリのチェックアウト
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Node.jsのセットアップ
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # package.jsonの依存関係からNode.js 20が良いと判断
+          cache: "npm"
+
+      # 依存関係のインストール
+      - name: Install dependencies
+        run: npm ci
+
+      # リントチェック
+      - name: Run linting
+        run: npm run lint
+
+      # ビルド
+      - name: Build project
+        run: npm run build
+        env:
+          # 必要な環境変数があればここに追加
+          NEXT_PUBLIC_DEFAULT_CRAWL_DEPTH: 1
+          NEXT_PUBLIC_MAX_CRAWL_DEPTH: 5
+
+      # Vercel CLIのインストール
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      # プレビューデプロイ（プルリクエスト時）
+      - name: Deploy Preview to Vercel
+        if: github.event_name == 'pull_request'
+        run: |
+          vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      # 本番デプロイ（mainブランチへのプッシュ時）
+      - name: Deploy Production to Vercel
+        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+        run: |
+          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
