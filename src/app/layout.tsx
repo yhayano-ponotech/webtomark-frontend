@@ -5,7 +5,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 
 export const metadata: Metadata = {
-  title: 'MarkItDown - ウェブサイトクローラー＆変換アプリケーション',
+  title: 'Web2Markdown - ウェブサイトクローラー＆変換アプリケーション',
   description: 'ウェブサイトをクローリングしてMarkdown形式に変換するアプリケーション',
 };
 

@@ -96,7 +96,7 @@ export default function Home() {
     <div className="container mx-auto py-8 px-4">
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-center text-2xl">MarkItDown</CardTitle>
+          <CardTitle className="text-center text-2xl">Web2Markdown</CardTitle>
           <CardDescription className="text-center">
             ウェブサイトをクローリングしてMarkdown形式に変換します
           </CardDescription>

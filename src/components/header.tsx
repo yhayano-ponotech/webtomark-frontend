@@ -8,7 +8,7 @@ export function Header() {
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center space-x-2">
           <FileDown size={24} className="text-primary" />
-          <span className="font-bold text-xl">MarkItDown</span>
+          <span className="font-bold text-xl">Web2Markdown</span>
         </Link>
         
         <nav>
@@ -20,7 +20,7 @@ export function Header() {
             </li>
             <li>
               <a
-                href="https://github.com/your-username/markitdown-app"
+                href="https://github.com/yhayano-ponotech/webtomark-frontend"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm font-medium hover:text-primary"
