@@ -24,34 +24,34 @@ export async function startConversion(request: ConversionRequest): Promise<{ tas
  * タスクのステータスを取得する
  */
 export async function getTaskStatus(taskId: string): Promise<TaskStatus> {
-  const response = await fetch(`/api/tasks/${taskId}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`タスクステータスの取得に失敗しました: ${response.statusText}`);
-  }
-
-  return response.json();
+    const response = await fetch(`/api/tasks/${taskId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  
+    if (!response.ok) {
+      throw new Error(`タスクステータスの取得に失敗しました: ${response.statusText}`);
+    }
+  
+    return response.json();
 }
 
 /**
  * 変換結果を取得する
  */
 export async function fetchConversionResult(taskId: string): Promise<ConversionResult> {
-  const response = await fetch(`/api/tasks/${taskId}/result`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`変換結果の取得に失敗しました: ${response.statusText}`);
-  }
-
-  return response.json();
+    const response = await fetch(`/api/tasks/${taskId}/result`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  
+    if (!response.ok) {
+      throw new Error(`変換結果の取得に失敗しました: ${response.statusText}`);
+    }
+  
+    return response.json();
 }

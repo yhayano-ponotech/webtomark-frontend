@@ -1,15 +1,15 @@
-// src/app/api/tasks/[taskId]/route.ts
+// src/app/api/tasks/[taskid]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 // タスクのステータスを取得するAPIルート
 export async function GET(
   request: NextRequest,
-  { params }: { params: { taskId: string } }
+  { params }: { params: Promise<{ taskid: string }> }
 ) {
   try {
-    const { taskId } = params;
+    const { taskid } = await params;
     
-    if (!taskId) {
+    if (!taskid) {
       return NextResponse.json(
         { error: 'Task ID is required' },
         { status: 400 }
@@ -19,7 +19,7 @@ export async function GET(
     // FastAPIバックエンドにステータスリクエストを転送
     const backendUrl = process.env.BACKEND_API_URL;
     
-    const backendResponse = await fetch(`${backendUrl}/api/tasks/${taskId}/`, {
+    const backendResponse = await fetch(`${backendUrl}/api/tasks/${taskid}/`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -45,7 +45,7 @@ export async function GET(
     });
     
   } catch (error) {
-    console.error(`Error in /api/tasks/${params.taskId}:`, error);
+    console.error(`Error in /api/tasks/${(await params).taskid}:`, error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
