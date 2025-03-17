@@ -24,12 +24,26 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // 環境変数からクロール深度の制限値を取得
+    const maxCrawlDepth = parseInt(process.env.MAX_CRAWL_DEPTH || '5', 10);
+    
+    // クロール深度が最大値を超えていないか確認
+    if (body.options?.crawlDepth > maxCrawlDepth) {
+      body.options.crawlDepth = maxCrawlDepth;
+    }
+    
     // タスクIDを生成
     const taskId = uuidv4();
     
     // FastAPIバックエンドにリクエストを転送
-    // 実際のプロダクションでは、環境変数からバックエンドURLを取得します
-    const backendUrl = process.env.BACKEND_API_URL;
+    const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:8000';
+    
+    if (!backendUrl) {
+      return NextResponse.json(
+        { error: 'Backend API URL is not configured' },
+        { status: 500 }
+      );
+    }
     
     const backendResponse = await fetch(`${backendUrl}/api/convert/`, {
       method: 'POST',

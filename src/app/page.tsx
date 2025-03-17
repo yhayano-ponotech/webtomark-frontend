@@ -1,7 +1,7 @@
 // src/app/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,12 +17,21 @@ import { ProgressBar } from '@/components/progress-bar';
 export default function Home() {
   const router = useRouter();
   const [url, setUrl] = useState('');
-  const [crawlDepth, setCrawlDepth] = useState(1);
+  // 環境変数からデフォルト値を取得するか、設定されていなければフォールバック値を使用
+  const defaultDepth = parseInt(process.env.NEXT_PUBLIC_DEFAULT_CRAWL_DEPTH || '1', 10);
+  const maxDepth = parseInt(process.env.NEXT_PUBLIC_MAX_CRAWL_DEPTH || '5', 10);
+  
+  const [crawlDepth, setCrawlDepth] = useState(defaultDepth);
   const [includeImages, setIncludeImages] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  
+  useEffect(() => {
+    // 初期値を環境変数から設定
+    setCrawlDepth(defaultDepth);
+  }, [defaultDepth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,7 +144,7 @@ export default function Home() {
                 <Slider
                   id="crawlDepth"
                   min={1}
-                  max={5}
+                  max={maxDepth}
                   step={1}
                   value={[crawlDepth]}
                   onValueChange={(values) => setCrawlDepth(values[0])}

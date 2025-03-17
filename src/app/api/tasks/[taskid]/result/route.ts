@@ -17,7 +17,7 @@ export async function GET(
     }
     
     // FastAPIバックエンドに結果リクエストを転送
-    const backendUrl = process.env.BACKEND_API_URL;
+    const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:8000';
     
     const backendResponse = await fetch(`${backendUrl}/api/tasks/${taskid}/result/`, {
       method: 'GET',
