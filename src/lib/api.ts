@@ -21,6 +21,26 @@ export async function startConversion(request: ConversionRequest): Promise<{ tas
 }
 
 /**
+ * ファイルのアップロードと変換処理を開始する
+ */
+export async function uploadAndConvert(file: File): Promise<{ taskId: string }> {
+  // FormDataオブジェクトの作成
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch('/api/upload', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`ファイルのアップロードに失敗しました: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
  * タスクのステータスを取得する
  */
 export async function getTaskStatus(taskId: string): Promise<TaskStatus> {

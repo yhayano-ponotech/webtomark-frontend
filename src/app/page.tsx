@@ -9,10 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Globe, FileUp } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { startConversion } from '@/lib/api';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { startConversion, uploadAndConvert, getTaskStatus } from '@/lib/api';
 import { ProgressBar } from '@/components/progress-bar';
+import { FileUpload } from '@/components/file-upload';
 
 export default function Home() {
   const router = useRouter();
@@ -27,13 +29,40 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [activeTab, setActiveTab] = useState('url');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
   useEffect(() => {
     // 初期値を環境変数から設定
     setCrawlDepth(defaultDepth);
   }, [defaultDepth]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // タスク進捗のポーリング関数
+  const pollTaskProgress = async (taskId: string) => {
+    const intervalId = setInterval(async () => {
+      try {
+        const statusResponse = await getTaskStatus(taskId);
+        
+        setProgress(statusResponse.progress);
+        
+        if (statusResponse.status === 'completed') {
+          clearInterval(intervalId);
+          router.push(`/result/${taskId}`);
+        } else if (statusResponse.status === 'failed') {
+          clearInterval(intervalId);
+          setError('変換処理に失敗しました: ' + (statusResponse.message || '不明なエラー'));
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Progress check failed:', err);
+      }
+    }, 2000);
+    
+    // コンポーネントのクリーンアップ時にインターバルをクリア
+    return () => clearInterval(intervalId);
+  };
+
+  const handleUrlSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // バリデーション
@@ -44,7 +73,7 @@ export default function Home() {
 
     try {
       // URLの形式チェック
-      new URL(url);
+      new URL(url.startsWith('http') ? url : `https://${url}`);
     } catch (e) {
       setError(`有効なURLを入力してください: ${e}`);
       return;
@@ -65,25 +94,7 @@ export default function Home() {
       setTaskId(response.taskId);
       
       // 進捗状況のポーリングを開始
-      const intervalId = setInterval(async () => {
-        try {
-          const statusResponse = await fetch(`/api/tasks/${response.taskId}`);
-          const data = await statusResponse.json();
-          
-          setProgress(data.progress);
-          
-          if (data.status === 'completed') {
-            clearInterval(intervalId);
-            router.push(`/result/${response.taskId}`);
-          } else if (data.status === 'failed') {
-            clearInterval(intervalId);
-            setError('変換処理に失敗しました');
-            setLoading(false);
-          }
-        } catch (err) {
-          console.error('Progress check failed:', err);
-        }
-      }, 2000);
+      pollTaskProgress(response.taskId);
       
     } catch (err) {
       console.error('Conversion failed:', err);
@@ -92,13 +103,108 @@ export default function Home() {
     }
   };
 
+  const handleFileUpload = async () => {
+    if (!selectedFile) {
+      setError('ファイルを選択してください');
+      return;
+    }
+
+    setError(null);
+    setLoading(true);
+
+    try {
+      const response = await uploadAndConvert(selectedFile);
+      
+      setTaskId(response.taskId);
+      
+      // 進捗状況のポーリングを開始
+      pollTaskProgress(response.taskId);
+      
+    } catch (err) {
+      console.error('File upload failed:', err);
+      setError('ファイルのアップロードに失敗しました');
+      setLoading(false);
+    }
+  };
+
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    setError(null);
+  };
+
+  const renderUrlTab = () => (
+    <form onSubmit={handleUrlSubmit} className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="url">ウェブサイトURL</Label>
+        <Input
+          id="url"
+          type="text"
+          placeholder="https://example.com"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          className="w-full"
+          disabled={loading}
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <Label htmlFor="crawlDepth">クロール深度: {crawlDepth}</Label>
+          <span className="text-sm text-muted-foreground">
+            {crawlDepth === 1 ? '初期ページのみ' : `${crawlDepth}ページまで`}
+          </span>
+        </div>
+        <Slider
+          id="crawlDepth"
+          min={1}
+          max={maxDepth}
+          step={1}
+          value={[crawlDepth]}
+          onValueChange={(values) => setCrawlDepth(values[0])}
+          disabled={loading}
+        />
+      </div>
+      
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="includeImages"
+          checked={includeImages}
+          onCheckedChange={setIncludeImages}
+          disabled={loading}
+        />
+        <Label htmlFor="includeImages">画像を含める</Label>
+      </div>
+      
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? '処理中...' : '変換開始'}
+      </Button>
+    </form>
+  );
+
+  const renderFileTab = () => (
+    <div className="space-y-6">
+      <FileUpload 
+        disabled={loading} 
+        onFileSelect={handleFileSelect} 
+      />
+      
+      <Button 
+        onClick={handleFileUpload} 
+        className="w-full" 
+        disabled={loading || !selectedFile}
+      >
+        {loading ? '処理中...' : 'ファイルを変換'}
+      </Button>
+    </div>
+  );
+
   return (
     <div className="container mx-auto py-8 px-4">
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle className="text-center text-2xl">Web2Markdown</CardTitle>
           <CardDescription className="text-center">
-            ウェブサイトをクローリングしてMarkdown形式に変換します
+            ウェブサイトやファイルをMarkdown形式に変換します
           </CardDescription>
         </CardHeader>
         
@@ -116,61 +222,35 @@ export default function Home() {
               <p className="text-center">変換処理中...</p>
               <ProgressBar progress={progress} />
               <p className="text-sm text-center text-muted-foreground">
-                大きなサイトの場合は時間がかかることがあります
+                処理に時間がかかる場合があります
               </p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="url">ウェブサイトURL</Label>
-                <Input
-                  id="url"
-                  type="text"
-                  placeholder="https://example.com"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="w-full"
-                  disabled={loading}
-                />
-              </div>
+            <Tabs defaultValue="url" value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="url">
+                  <Globe className="h-4 w-4 mr-2" />
+                  URLから変換
+                </TabsTrigger>
+                <TabsTrigger value="file">
+                  <FileUp className="h-4 w-4 mr-2" />
+                  ファイルから変換
+                </TabsTrigger>
+              </TabsList>
               
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="crawlDepth">クロール深度: {crawlDepth}</Label>
-                  <span className="text-sm text-muted-foreground">
-                    {crawlDepth === 1 ? '初期ページのみ' : `${crawlDepth}ページまで`}
-                  </span>
-                </div>
-                <Slider
-                  id="crawlDepth"
-                  min={1}
-                  max={maxDepth}
-                  step={1}
-                  value={[crawlDepth]}
-                  onValueChange={(values) => setCrawlDepth(values[0])}
-                  disabled={loading}
-                />
-              </div>
+              <TabsContent value="url">
+                {renderUrlTab()}
+              </TabsContent>
               
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="includeImages"
-                  checked={includeImages}
-                  onCheckedChange={setIncludeImages}
-                  disabled={loading}
-                />
-                <Label htmlFor="includeImages">画像を含める</Label>
-              </div>
-              
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? '処理中...' : '変換開始'}
-              </Button>
-            </form>
+              <TabsContent value="file">
+                {renderFileTab()}
+              </TabsContent>
+            </Tabs>
           )}
         </CardContent>
         
         <CardFooter className="flex justify-center text-sm text-muted-foreground">
-          <p>MarkItDownを使用して、ウェブサイトのコンテンツを簡単にMarkdown形式に変換できます</p>
+          <p>MarkItDownを使用して、ウェブサイトやファイルを簡単にMarkdown形式に変換できます</p>
         </CardFooter>
       </Card>
     </div>
